@@ -1,0 +1,37 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build Xcode Project
+        run: |
+          xcodebuild -workspace *.xcworkspace -scheme warhold -configuration Release -sdk iphoneos archive -archivePath $HOME/build/warhold.xcarchive || \
+          xcodebuild -project *.xcodeproj -scheme warhold -configuration Release -sdk iphoneos archive -archivePath $HOME/build/warhold.xcarchive
+
+      - name: Export IPA
+        run: |
+          mkdir -p $HOME/build/Payload
+          cp -r $HOME/build/warhold.xcarchive/Products/Applications/*.app $HOME/build/Payload/
+          cd $HOME/build
+          zip -r warhold.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warhold-ipa
+          path: $HOME/build/warhold.ipa
